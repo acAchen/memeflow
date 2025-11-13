@@ -1,27 +1,31 @@
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
+from prompt import PromptTemplate,query2script_prompt
 
-fixed_prompt = """
-请根据输入文本生成一段富有戏剧性和梗文化的视频文案小剧本，输入文本如下：
-"""
-
+load_dotenv()
 def init_client():
-    load_dotenv()
     api_key = os.environ.get('CREATIVITY_API_KEY')
+    BASE_URL = os.environ.get('BASE_URL')
     if not api_key:
         raise ValueError("CREATIVITY_API_KEY 未设置，请检查.env文件")
     return OpenAI(
         api_key=api_key,
-        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+        base_url=BASE_URL,
     )
 
-def get_text(input_text='不想上班', output_file="text.txt"):
+def get_text(input_text='帮我按照格式生成一个HKU校园爽剧，要翻转打脸', output_file="text.txt"):
     client = init_client()
+    MODEL = os.environ.get('MODEL')
+    q2s = PromptTemplate(
+        system_template=(query2script_prompt),
+        user_template=("这是一段用户输入文本，请按照要求生成脚本：{user_input}")
+    )
+    q2s_prompt = q2s.format_messages(user_input=input_text)
     response = client.chat.completions.create(
-        model="qwen3-max", 
-        messages=[{"role": "user", "content": fixed_prompt + input_text}],
-        stream=False
+        messages=q2s_prompt,
+        stream=False,
+        model=MODEL,
     )
     res = response.choices[0].message.content
 

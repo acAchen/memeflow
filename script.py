@@ -1,33 +1,24 @@
 import os
 import json
+import traceback
 from openai import OpenAI
 from dotenv import load_dotenv
+from prompt import PromptTemplate, script2json_prompt
 
-fixed_prompt = """
-请将输入文本转化为结构化的脚本输出，输出格式如下：
-[
-  {
-    "scene_number": 1,
-    "backgrounds": "airport",
-    "meme":"崩溃"
-    "text": "周一早上7:00",
-    "duration":3
-  }
-  // ...
-]
-backgrounds严格从以下选择：["concert", "fantacy", "others", "rooftop", "stage", "airport", "amusementpark", "bank", "cinema", "classroom", "grassland", "gym", "home", "hospital", "kitchen", "library", "museum", "park", "playground", "pool", "restaurant", "school", "shop", "station", "theater", "village"]；
-meme严格从以下选择：["哀求", "崩溃", "吃惊", "大笑", "呆滞", "得瑟", "得意", "烦躁", "害羞", "坏笑", "欢呼", "饥饿", "焦急", "教训", "惊讶", "可怜", "蔑视", "努力", "其他", "傻笑", "痛苦", "威严", "无辜", "无奈", "无助", "兴奋", "勇敢", "愉快", "震惊","愉快"]
-输入文本如下：
-"""
-
+load_dotenv()
+backgrounds = os.listdir('./backgrounds')
+meme_names = os.listdir("./meme")
+backgrounds = [b.split('.')[0] for b in backgrounds]
+meme_names = [m.split('.')[0] for m in meme_names]
 def init_client():
-    load_dotenv()
     api_key = os.environ.get('SCRIPT_API_KEY')
+    BASE_URL = os.environ.get('BASE_URL')
+
     if not api_key:
         raise ValueError("SCRIPT_API_KEY 未设置，请检查.env文件")
     return OpenAI(
         api_key=api_key,
-        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+        base_url=BASE_URL,
     )
 
 def read_input_file(file_path='text.txt'):
@@ -75,14 +66,20 @@ def get_script(input_file='text.txt', output_file="script.jsonl"):
         input_text = read_input_file(input_file)
         print(f"成功读取输入文件: {input_file}")
         print(f"输入内容: {input_text[:100]}...")  # 只显示前100个字符
-        
+        s2j = PromptTemplate(
+            system_template=(script2json_prompt),
+            user_template=("这是一段**脚本内容**，请按照要求生成json：{script}")
+        )
+        s2j_prompt = s2j.format_messages(script=input_text,backgrounds=backgrounds, memes=meme_names)
+        print(s2j_prompt)
+
+        MODEL = os.environ.get('MODEL')
         # 初始化客户端并调用API
         client = init_client()
-        full_prompt = fixed_prompt + input_text
-        
+        # full_prompt = fixed_prompt + input_text
         response = client.chat.completions.create(
-            model="qwen3-max", 
-            messages=[{"role": "user", "content": full_prompt}],
+            model=MODEL,
+            messages=s2j_prompt,
             stream=False
         )
         res = response.choices[0].message.content
@@ -97,6 +94,7 @@ def get_script(input_file='text.txt', output_file="script.jsonl"):
         return res
         
     except Exception as e:
+        traceback.print_exc()
         print(f"处理过程中出错: {e}")
         return None
 
