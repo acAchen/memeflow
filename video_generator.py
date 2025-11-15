@@ -19,7 +19,7 @@ def generate_video_from_input(input_text):
             
             # 步骤2: 生成脚本
             print("步骤2: 生成脚本...")
-            script_file = os.path.join(temp_dir, "script.jsonl")
+            script_file = os.path.join(os.getcwd(), "script_checked.jsonl")
             script_content = get_script(text_file, script_file)
             
             if not script_content:
