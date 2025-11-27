@@ -5,6 +5,7 @@ from typing import Tuple
 
 from creativity import get_text
 from script import get_script  # 负责 故事 → JSONL 脚本
+import asyncio
 from movie import process_jsonl_story  # 负责 JSONL → 视频
 
 DEFAULT_SCRIPT_FILE = os.path.join(os.getcwd(), "script_checked.jsonl")
@@ -52,7 +53,7 @@ def generate_video_from_script(script_text: str) -> Tuple[bool, str]:
         with open(script_file, "w", encoding="utf-8") as f:
             f.write(script_text)
 
-        ok = process_jsonl_story(script_file)
+        ok = asyncio.run(process_jsonl_story(script_file))
         if not ok:
             return False, "视频生成失败"
 

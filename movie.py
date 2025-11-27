@@ -539,17 +539,41 @@ def _process_scene(scene, default_index):
         return scene_number, None
 
 async def process_jsonl_story(jsonl_file):
-    """处理JSONL文件并生成视频（异步版本）"""
+    """处理JSON/JSONL文件并生成视频（异步版本）"""
 
-    story = []
-    with open(jsonl_file, 'r', encoding='utf-8') as f:
-        for line in f:
+    def load_story_from_file(file_path):
+        story_data = []
+        with open(file_path, 'r', encoding='utf-8') as f:
+            raw_content = f.read().strip()
+
+        if not raw_content:
+            print("脚本文件为空，无法生成视频")
+            return story_data
+
+        # 尝试解析为标准 JSON（列表或单个对象）
+        try:
+            parsed = json.loads(raw_content)
+            if isinstance(parsed, list):
+                print("检测到 JSON 数组格式脚本，开始处理...")
+                return parsed
+            elif isinstance(parsed, dict):
+                print("检测到单个 JSON 对象脚本，开始处理...")
+                return [parsed]
+        except json.JSONDecodeError:
+            # 如果整体解析失败，尝试按 JSONL 行解析
+            pass
+
+        print("检测到 JSONL 行格式脚本，开始处理...")
+        for line in raw_content.splitlines():
             if line.strip():
                 try:
                     scene_data = json.loads(line.strip())
-                    story.append(scene_data)
+                    story_data.append(scene_data)
                 except json.JSONDecodeError as e:
                     print(f"JSON解析错误: {e}，跳过该行: {line}")
+        return story_data
+
+    story = load_story_from_file(jsonl_file)
 
     print(f"成功读取 {len(story)} 个场景")
 

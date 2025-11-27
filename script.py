@@ -68,7 +68,13 @@ def jsoncheck(json_file="script.jsonl",output_file="script_checked.jsonl"):
             user_template="请按照要求重新检查这段json并生成：{jsondata}"
         )
         with open(json_file, 'r', encoding='utf-8') as f:
-            json_str = f.read()
+            raw_content = f.read().strip()
+            try:
+                parsed = json.loads(raw_content)
+                json_str = json.dumps(parsed, ensure_ascii=False)
+                print("检测到标准 JSON 格式脚本，已自动解析。")
+            except json.JSONDecodeError:
+                json_str = raw_content
             jc_prompt = jc.format_messages(jsondata=json_str,backgrounds=backgrounds, memes=meme_names)
             print(json.dumps(jc_prompt,indent=4,ensure_ascii=False))
             response = jsoncheck_client.chat.completions.create(
